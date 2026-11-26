@@ -1,0 +1,52 @@
+/* 精靈造型的動畫（SKIN-SPEC.md 第 3 節）。只動 transform／translate／rotate／opacity，交給 GPU 合成。 */
+.skin-view { position: absolute; inset: 0; --amp: 1; }
+.skin-view[data-frame="1.5"] { inset: -25%; } /* 畫布是方框的 1.5 倍，方框在正中間 */
+.skin-view[data-preset="calm"] { --amp: .6; }
+.skin-view[data-preset="lively"] { --amp: 1.4; }
+.skin-layer { position: absolute; inset: 0; transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+.skin-layer img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+
+/* 配件晃動、道具浮動 */
+.skin-layer.m-wobble img { animation: skin-wobble 3.4s ease-in-out infinite; animation-delay: -.9s; }
+.skin-layer.m-bob img { animation: skin-bob 2.6s ease-in-out infinite; }
+.skin-layer.m-bob.alt img { animation-delay: -1.3s; }
+.skin-view[data-preset="lively"] .skin-layer img { animation-duration: 2s; }
+@keyframes skin-wobble { 0%, 100% { rotate: 0deg; } 50% { rotate: calc(var(--amp) * -4deg); } }
+/* 特效：一閃一閃（星星、光圈） */
+.skin-layer.m-twinkle img { animation: skin-twinkle 2.2s ease-in-out infinite; }
+@keyframes skin-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: calc(1 - var(--amp) * .6); } }
+@keyframes skin-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 calc(var(--amp) * -3%); } }
+
+/* 狀態：思考中道具轉快、冒泡泡；完成跳一下；出錯抖三下 */
+.skin-view[data-mood="work"] .skin-layer.m-bob img { animation-duration: .9s; }
+.skin-view.react-done { animation: skin-jump .4s ease-out; }
+.skin-view.react-error { animation: skin-shake .4s ease-in-out 3; }
+@keyframes skin-jump { 40% { transform: translateY(-6%); } }
+@keyframes skin-shake { 25% { transform: translateX(-3%); } 75% { transform: translateX(3%); } }
+.skin-thought { position: absolute; top: 0; right: 0; width: 26%; height: 26%; opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+.skin-view[data-mood="work"] .skin-thought { opacity: 1; }
+.skin-thought i { position: absolute; border-radius: 50%; background: #8f86d8; animation: skin-dot 1.2s ease-in-out infinite; }
+.skin-thought i:nth-child(1) { left: 0; bottom: 0; width: 18%; height: 18%; }
+.skin-thought i:nth-child(2) { left: 30%; bottom: 30%; width: 26%; height: 26%; animation-delay: .3s; }
+.skin-thought i:nth-child(3) { left: 64%; bottom: 62%; width: 34%; height: 34%; animation-delay: .6s; }
+@keyframes skin-dot { 50% { opacity: .25; } }
+
+/* 收合時暫停（和原本的小精靈一樣，閒置時不必每格重繪） */
+.skin-view.paused, .skin-view.paused * { animation-play-state: paused !important; }
+
+/* 拆開圖層（精靈博士預覽用） */
+.skin-view.exploded .skin-layer[data-owner="hat"] { transform: translateY(-14%); }
+.skin-view.exploded .skin-layer[data-owner="face-accessory"] { transform: translate(10%, -4%); }
+.skin-view.exploded .skin-layer[data-owner="prop-left"] { transform: translateX(-14%); }
+.skin-view.exploded .skin-layer[data-owner="prop-right"] { transform: translateX(14%); }
+.skin-view.exploded .skin-layer[data-owner="extra-a"] { transform: translate(8%, 14%); }
+.skin-view.exploded .skin-layer[data-owner="extra-b"] { transform: translate(-8%, 14%); }
+.skin-view.exploded .skin-layer[data-id="face"] { transform: translateY(5%); }
+.skin-view.exploded .skin-layer[data-id="eye-left"] { transform: translate(-7%, -3%); }
+.skin-view.exploded .skin-layer[data-id="eye-right"] { transform: translate(7%, -3%); }
+.skin-view.exploded .skin-layer[data-id="mouth"] { transform: translateY(7%); }
+.skin-view.exploded .skin-layer[data-id="fx"] { transform: translateY(-8%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-view, .skin-view * { animation: none !important; transition: none !important; }
+}

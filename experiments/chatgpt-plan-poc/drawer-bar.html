@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>AI 抽屜工具列</title>
+    <link rel="stylesheet" href="./drawer-bar.css" />
+  </head>
+  <body>
+    <nav class="bar" aria-label="AI 抽屜工具列">
+      <button class="home" data-action="home" type="button" title="回到小精靈主視窗">✦ 回小精靈</button>
+      <span id="app-name" class="app-name"></span>
+      <div class="actions">
+        <button id="pin" data-action="pin" type="button" aria-pressed="false" title="固定：不自動收起，左邊的程式讓出位置">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3l6 6-3 1-4 4 .5 4.5L12 21l-4-4-5 5-1-1 5-5-4-4 2.5-2.5L10 10l4-4 1-3z" /></svg>
+          <span id="pin-label">固定</span>
+        </button>
+        <button data-action="hide" type="button" title="收進右邊（⌘⇧9 再拉出來）">收起 ›</button>
+        <button class="close" data-action="restore" type="button" title="結束並排，所有視窗放回原位" aria-label="結束並排">✕</button>
+      </div>
+    </nav>
+    <script type="module" src="./drawer-bar.mjs"></script>
+  </body>
+</html>

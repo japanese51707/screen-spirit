@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Screen Spirit 對話</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./spirit-lab.css" />
+    <link rel="stylesheet" href="./skin-view.css" />
+    <link rel="stylesheet" href="./workflow.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div>
+            <p class="eyebrow">SCREEN SPIRIT</p>
+            <h1>小精靈</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="spirit-lab-button" class="button button-lab" type="button" title="管理與建立執行專項工作的精靈">✦ 精靈博士</button>
+          <button id="workflow-button" class="button button-quiet" type="button" title="把精靈和 AI 工具串成工作流">⛓ 工作流</button>
+          <button id="integrations-button" class="button button-quiet" type="button">管理 AI 連線</button>
+          <button id="history-button" class="button button-quiet" type="button">歷史紀錄</button>
+          <button id="hide-chat-button" class="chat-close" type="button" aria-label="收起視窗">×</button>
+        </div>
+      </header>
+
+      <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="error-dismiss" class="error-dismiss" type="button" aria-label="關閉這則訊息">×</button></div>
+
+      <div id="integrations-banner" class="setup-banner" hidden>
+        <span id="integrations-banner-text">還沒設定要連接哪些 AI，目前所有選項都不能用。</span>
+        <button id="integrations-banner-button" class="button button-dark" type="button">開始設定</button>
+      </div>
+
+      <section class="card" aria-labelledby="start-title">
+        <h2 id="start-title" class="card-title">開始提問</h2>
+        <div class="start-actions">
+          <button id="select-screen-button" class="start-button" type="button">
+            <span class="start-icon" aria-hidden="true">⬚</span>
+            <span class="start-text"><strong>圈選畫面</strong><small>框一塊畫面來問</small></span>
+            <kbd>⌘⇧1</kbd>
+          </button>
+          <button id="home-text-button" class="start-button" type="button">
+            <span class="start-icon" aria-hidden="true">Aa</span>
+            <span class="start-text"><strong>反白文字</strong><small>先反白一段文字再按</small></span>
+            <kbd>⌘⇧2</kbd>
+          </button>
+          <button id="home-spirit-button" class="start-button start-spirit" type="button">
+            <span class="start-icon" aria-hidden="true">🧙</span>
+            <span class="start-text"><strong>派精靈工作</strong><small>選一隻精靈，直接輸入要求</small></span>
+          </button>
+        </div>
+        <p id="selection-status" class="status-line"></p>
+      </section>
+
+      <section class="card" aria-labelledby="target-title">
+        <h2 id="target-title" class="card-title">預設送到</h2>
+        <div class="field-row">
+          <label for="home-target">AI</label>
+          <select id="home-target"></select>
+        </div>
+        <div id="home-model-row" class="field-row" hidden>
+          <label for="home-model">模型</label>
+          <select id="home-model"></select>
+          <button id="home-api-key" class="link-button" type="button">金鑰</button>
+        </div>
+        <div id="home-layout-row" class="field-row" hidden>
+          <span class="field-label">畫面</span>
+          <div class="segmented" role="radiogroup" aria-label="送出後的畫面安排">
+            <button type="button" role="radio" data-layout="drawer" title="AI 放右側 1/3，滑鼠離開 1 秒自動收進右邊">抽屜</button>
+            <button type="button" role="radio" data-layout="split" title="左 2/3、右 1/3 固定並排">固定並排</button>
+            <button type="button" role="radio" data-layout="none" title="只送出，不移動任何視窗">不移動</button>
+          </div>
+        </div>
+        <p id="home-target-hint" class="hint"></p>
+      </section>
+
+      <section id="drawer-card" class="card drawer-card" aria-labelledby="drawer-title" hidden>
+        <h2 id="drawer-title" class="card-title">正在並排：<span id="drawer-app"></span><span id="drawer-state" class="pill"></span></h2>
+        <div class="drawer-actions">
+          <button id="drawer-toggle" class="button button-quiet" type="button"></button>
+          <button id="drawer-pin" class="button button-quiet" type="button"></button>
+          <button id="drawer-restore" class="button button-quiet danger" type="button">結束並排、視窗放回原位</button>
+        </div>
+      </section>
+
+      <details class="card settings-card">
+        <summary>內建 ChatGPT 方案與顯示設定</summary>
+        <div class="settings-body">
+          <div class="field-row">
+            <span class="field-label">連線</span>
+            <span class="connection">
+              <span id="status-dot" class="status-dot"></span>
+              <span id="status-label">正在檢查連線</span>
+            </span>
+            <button id="connect-button" class="button button-dark" type="button">連接 ChatGPT</button>
+            <button id="disconnect-button" class="button button-quiet" type="button" hidden>中斷連線</button>
+          </div>
+          <div id="builtin-error-row" class="inline-error" role="status" hidden>
+            <span id="builtin-error"></span>
+            <button id="builtin-retry" class="button button-quiet" type="button">重試</button>
+          </div>
+          <div class="field-row">
+            <label for="model-select">模型</label>
+            <select id="model-select" disabled>
+              <option value="">連線後載入</option>
+            </select>
+            <button id="usage-button" class="button button-quiet" type="button" disabled>方案用量</button>
+          </div>
+          <div class="field-row">
+            <label for="presentation-mode">對話框位置</label>
+            <select id="presentation-mode">
+              <option value="companion">小精靈旁</option>
+              <option value="near-source">圈選處旁</option>
+            </select>
+            <small id="presentation-hint" class="hint-inline">下次新對話套用</small>
+          </div>
+          <p class="hint">選「小精靈內建（ChatGPT 方案）」時，問題與圖片會送到 OpenAI，用量依你的 ChatGPT 方案授權。所有問答都加密存在這台電腦，24 小時後自動刪除。</p>
+          <button id="clear-button" class="button button-quiet" type="button" disabled>清除目前的測試對話</button>
+        </div>
+      </details>
+
+      <!-- 早期版本的對話區：功能已移到提問對話框，保留元件給程式使用但不顯示 -->
+      <div class="legacy" hidden>
+        <section id="transcript" class="transcript" aria-live="polite" aria-label="問答內容">
+          <div id="empty-state" class="empty-state"></div>
+        </section>
+      </div>
+
+      <dialog id="selection-question-dialog" class="selection-question-dialog" aria-labelledby="selection-question-title">
+        <form id="selection-question-form" class="selection-question-form">
+          <header class="selection-dialog-header">
+            <div>
+              <p class="eyebrow">SCREEN SPIRIT</p>
+              <h2 id="selection-question-title">小精靈對話</h2>
+            </div>
+            <button id="selection-question-cancel" type="button" class="finish-chat" aria-label="退出並收起對話">退出對話</button>
+          </header>
+          <p id="selection-question-description" class="selection-dialog-description">已附上圈選內容。你可以在這個對話框提問與追問。</p>
+          <div id="selection-question-source" class="selection-question-source" hidden>
+            <strong>已複製的來源內容</strong>
+            <div id="selection-question-source-text"></div>
+          </div>
+          <img id="selection-question-image" alt="本次來源內容預覽" hidden />
+          <div id="selection-context" class="selection-context" aria-label="將附帶的畫面脈絡" hidden></div>
+          <section id="selection-question-transcript" class="selection-question-transcript" aria-live="polite" aria-label="小精靈對話"></section>
+          <div id="selection-attachments" class="attach-row" aria-label="附件" hidden></div>
+          <textarea id="selection-question" rows="3" maxlength="20000" placeholder="例如：這段錯誤訊息代表什麼？（可以把圖片或檔案拖進來，或直接貼上圖片）"></textarea>
+          <div id="selection-question-hint" class="selection-question-hint"></div>
+          <div id="cli-login-bar" class="login-bar" role="status" hidden>
+            <span id="cli-login-text"></span>
+            <button id="cli-login-button" class="button button-dark" type="button">登入</button>
+          </div>
+          <div class="selection-question-actions">
+            <button id="selection-attach" class="attach-button" type="button" title="附加圖片或文字檔（也可以拖曳進來，或在輸入框直接貼上圖片）" aria-label="附加檔案">📎</button>
+            <input id="selection-attach-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/heic,.txt,.md,.markdown,.csv,.tsv,.json,.log,.yaml,.yml,.xml,.html,.js,.ts,.py,.sql,.css" multiple hidden />
+            <label class="target-control spirit-control" for="selection-spirit" hidden title="選一隻精靈，照牠的角色、限制、SOP 與資料庫來處理">
+              <span>精靈</span>
+              <select id="selection-spirit"></select>
+            </label>
+            <label class="target-control" for="selection-target">
+              <span>送到</span>
+              <select id="selection-target"></select>
+            </label>
+            <label class="target-control model-control-inline" for="selection-model" hidden>
+              <span>模型</span>
+              <select id="selection-model"></select>
+            </label>
+            <button id="selection-api-key" class="link-button" type="button" hidden title="更換或刪除 MixRoute API 金鑰">金鑰</button>
+            <label class="target-control project-control" for="selection-project" hidden title="Kiro 以專案為單位工作：選要在哪個專案裡問">
+              <span>專案</span>
+              <select id="selection-project"></select>
+            </label>
+            <label class="auto-submit" for="selection-dock" title="送出後把 AI App 放在螢幕右側 1/3、原本的程式放左側 2/3，直接在 App 裡看回覆、繼續對話">
+              <input id="selection-dock" type="checkbox" checked />
+              <span>並排顯示</span>
+            </label>
+            <label class="auto-submit" for="selection-auto-submit">
+              <input id="selection-auto-submit" type="checkbox" checked />
+              <span>自動送出</span>
+            </label>
+            <button id="selection-question-connect" type="button" class="button button-dark" hidden>連接 ChatGPT</button>
+            <button id="selection-question-send" type="submit" class="button button-send">送出</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="api-key-dialog" class="api-key-dialog" aria-labelledby="api-key-title">
+        <form id="api-key-form" class="api-key-form">
+          <p class="eyebrow">MIXROUTE</p>
+          <h2 id="api-key-title">輸入 MixRoute API 金鑰</h2>
+          <p class="api-key-note">金鑰會先驗證，再用 macOS 鑰匙圈加密，只存在這台電腦，不會寫進設定檔。可以在 mixroute.ai 的主控台建立金鑰。</p>
+          <p id="api-key-current" class="api-key-note" hidden></p>
+          <p id="api-key-blocked" class="api-key-note" hidden>
+            <span id="api-key-blocked-text"></span>
+            <button id="api-key-clear-blocked" type="button" class="link-button">清除標記，讓這些模型可以再試</button>
+          </p>
+          <input id="api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="貼上 API 金鑰" />
+          <div id="api-key-error" class="api-key-error" role="alert"></div>
+          <div class="api-key-actions">
+            <button id="api-key-clear" type="button" class="button button-quiet" hidden>刪除已存的金鑰</button>
+            <button id="api-key-cancel" type="button" class="button button-quiet">取消</button>
+            <button id="api-key-save" type="submit" class="button button-send">驗證並儲存</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="integrations-dialog" class="integrations-dialog" aria-labelledby="integrations-title">
+        <form id="integrations-form" class="integrations-form">
+          <header class="integrations-header">
+            <div>
+              <p id="setup-eyebrow" class="eyebrow">SCREEN SPIRIT</p>
+              <h2 id="integrations-title">要連接哪些 AI？</h2>
+            </div>
+            <button id="integrations-redetect" class="button button-quiet" type="button">重新偵測</button>
+          </header>
+          <ol id="setup-steps" class="setup-steps" hidden></ol>
+          <section class="setup-page" data-page="welcome" hidden>
+            <p class="setup-lead">歡迎使用螢幕圈選 AI 小精靈！接下來一步一步帶你完成設定，大約一分鐘。</p>
+            <div id="setup-platform" class="setup-card"></div>
+            <ul id="setup-plan" class="setup-plan"></ul>
+          </section>
+          <section class="setup-page" data-page="permissions" hidden>
+            <p class="setup-lead">macOS 需要你親自開啟兩個權限，小精靈才能圈選螢幕、幫你把問題貼進 AI。按「打開設定」後，在清單裡找到「Screen Spirit」並打開開關。</p>
+            <div id="setup-permissions" class="setup-permissions" aria-live="polite"></div>
+            <p id="setup-permissions-hint" class="setup-hint"></p>
+          </section>
+          <section class="setup-page" data-page="ai">
+            <p id="integrations-intro" class="integrations-intro">小精靈偵測到這台電腦上有下列 AI。請勾選你同意連接的項目，並在右邊選一個「預設」——每次圈選後會先送到它（提問時還是可以臨時換）。沒有勾選或沒有安裝的，在「送到」選單裡會反灰不能選。之後隨時可以在主視窗按「管理 AI 連線」修改。</p>
+            <div id="integrations-list" class="integrations-list" aria-live="polite"></div>
+          </section>
+          <section class="setup-page" data-page="done" hidden>
+            <p class="setup-lead">設定好了！確認一下：</p>
+            <dl id="setup-summary" class="setup-summary"></dl>
+            <p class="setup-hint">之後隨時可以在主視窗按「管理 AI 連線」修改。</p>
+          </section>
+          <div class="integrations-actions">
+            <button id="integrations-cancel" class="button button-quiet" type="button">稍後再說</button>
+            <span class="setup-spacer"></span>
+            <button id="setup-back" class="button button-quiet" type="button" hidden>上一步</button>
+            <button id="setup-next" class="button button-send" type="button" hidden>下一步</button>
+            <button id="integrations-save" class="button button-send" type="submit">連接勾選的項目</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="history-dialog" class="history-dialog" aria-labelledby="history-title">
+        <header class="history-header">
+          <div>
+            <p class="eyebrow">SCREEN SPIRIT</p>
+            <h2 id="history-title">歷史紀錄</h2>
+          </div>
+          <button id="history-close" class="chat-close" type="button" aria-label="關閉歷史紀錄">×</button>
+        </header>
+        <p class="history-note">Claude Code、Codex、Gemini CLI、Ollama、MixRoute 與內建 ChatGPT 的對話<strong>只存在這台 Mac</strong>，在網頁或 App 的歷史清單裡找不到，請在這裡查。每一筆右邊標示還有多久會被自動刪除。</p>
+        <div class="history-tools">
+          <div class="history-filters" role="radiogroup" aria-label="要看哪些紀錄">
+            <button class="history-filter" type="button" role="radio" data-filter="local" aria-checked="true">只存在這台 Mac</button>
+            <button class="history-filter" type="button" role="radio" data-filter="apps" aria-checked="false">App／網頁也找得到</button>
+            <button class="history-filter" type="button" role="radio" data-filter="all" aria-checked="false">全部</button>
+          </div>
+          <input id="history-search" class="history-search" type="search" placeholder="搜尋問題或回覆內容" aria-label="搜尋歷史紀錄" />
+        </div>
+        <div id="history-list" class="history-list" aria-live="polite"></div>
+        <button id="history-clear" class="button button-quiet history-clear" type="button">清除小精靈的歷史紀錄</button>
+      </dialog>
+
+      <div class="legacy" hidden>
+      <form id="composer" class="composer">
+        <div id="image-preview" class="image-preview" hidden>
+          <img id="preview-image" alt="待送出的圖片預覽" />
+          <div>
+            <span id="preview-name"></span>
+            <small>圖片會與問題一起送出</small>
+          </div>
+          <button id="remove-image" type="button" class="remove-image" aria-label="移除圖片">×</button>
+        </div>
+        <textarea id="question" rows="3" maxlength="20000" placeholder="輸入問題；可以在同一段對話中繼續追問…" disabled></textarea>
+        <div class="composer-footer">
+          <label class="attach-button" for="image-file">＋ 附加圖片</label>
+          <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+          <span id="composer-hint">連接帳號後即可開始</span>
+          <button id="cancel-button" type="button" class="button button-quiet" hidden>停止</button>
+          <button id="send-button" type="submit" class="button button-send" disabled>送出</button>
+        </div>
+      </form>
+
+      </div>
+    </main>
+    <section id="spirit-lab" class="lab" aria-label="精靈博士" hidden></section>
+    <section id="workflow" class="wf-root" aria-label="工作流" hidden></section>
+    <script type="module" src="./renderer.mjs"></script>
+  </body>
+</html>

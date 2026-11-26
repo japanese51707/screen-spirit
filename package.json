@@ -1,0 +1,68 @@
+{
+  "name": "screen-spirit-framework-poc",
+  "version": "0.1.0",
+  "productName": "Screen Spirit",
+  "main": "experiments/chatgpt-plan-poc/main.mjs",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "poc:electron": "electron experiments/electron-poc/main.cjs",
+    "poc:tauri": "tauri dev --config experiments/tauri-poc/src-tauri/tauri.conf.json",
+    "dev:tauri-ui": "vite experiments/tauri-poc --host 127.0.0.1 --port 1420",
+    "build:chatgpt-plan": "npm run build --workspace=@siwc/local",
+    "poc:chatgpt-plan": "npm run build:chatgpt-plan && electron experiments/chatgpt-plan-poc/main.mjs",
+    "poc:skin-test": "electron experiments/chatgpt-plan-poc/main.mjs --skin-test",
+    "package:screen-spirit": "npm run build:chatgpt-plan && electron-forge package --platform=darwin --arch=arm64",
+    "package:screen-spirit:win": "npm run build:chatgpt-plan && electron-forge package --platform=win32 --arch=x64"
+  },
+  "workspaces": [
+    "experiments/chatgpt-plan-poc/vendor/siwc-local"
+  ],
+  "devDependencies": {
+    "@electron-forge/cli": "^8.0.1",
+    "@tauri-apps/api": "^2.12.0",
+    "@tauri-apps/cli": "^2.12.0",
+    "@tauri-apps/plugin-global-shortcut": "^2.4.0",
+    "electron": "^45.4.1",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@siwc/local": "0.1.0",
+    "cross-spawn": "^7.0.6"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "name": "Screen Spirit",
+        "appBundleId": "com.screenspirit.localpoc",
+        "appCategoryType": "public.app-category.productivity",
+        "asar": false,
+        "extendInfo": {
+          "NSScreenCaptureUsageDescription": "Screen Spirit captures a temporary screenshot only when you start a screen selection. It crops your selected region, discards the full-screen images, and sends the crop only after you submit your question."
+        },
+        "extendHelperInfo": {
+          "NSScreenCaptureUsageDescription": "Screen Spirit captures a temporary screenshot only when you start a screen selection. It crops your selected region, discards the full-screen images, and sends the crop only after you submit your question."
+        },
+        "ignore": [
+          "^/archive($|/)",
+          "^/logs($|/)",
+          "^/out($|/)",
+          "^/\\.github($|/)",
+          "^/github-workflows($|/)",
+          "^/\\.gitignore$",
+          "^/README\\.md$",
+          "^/安裝或更新 Screen Spirit\\.command$",
+          "^/安裝或更新 Screen Spirit \\(Windows\\)\\.cmd$",
+          "^/experiments/(electron-poc|tauri-poc|visibility-poc)($|/)",
+          "^/experiments/chatgpt-plan-poc/archive($|/)",
+          "^/experiments/chatgpt-plan-poc/skin-test-output($|/)",
+          "/__pycache__($|/)",
+          "\\.DS_Store$",
+          "^/SPEC\\.md$",
+          "^/DESIGN\\.md$"
+        ]
+      },
+      "makers": []
+    }
+  }
+}

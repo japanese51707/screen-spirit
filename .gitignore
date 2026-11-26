@@ -1,0 +1,24 @@
+# 套件與打包結果
+node_modules/
+out/
+**/vendor/siwc-local/dist/
+
+# 本機紀錄、測試輸出、備份（不要上傳）
+logs/
+**/archive/
+**/skin-test-output/
+**/__pycache__/
+.DS_Store
+*.log
+
+# 金鑰、環境設定（App 的金鑰存在 macOS 鑰匙圈，不在專案裡；這裡是保險）
+.env
+.env.*
+!.env.example
+
+# 只留在本機的規劃文件（程式不會讀它們）
+/SPEC.md
+/DESIGN.md
+
+# Claude 傳給你的截圖等暫存檔
+Claude outputs/

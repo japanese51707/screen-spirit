@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>Screen Spirit</title>
+    <link rel="stylesheet" href="./companion.css" />
+    <link rel="stylesheet" href="./skin-view.css" />
+  </head>
+  <body class="collapsed">
+    <main class="companion">
+      <button id="mascot" class="mascot" type="button" aria-label="點擊圈選畫面；拖曳可移動小精靈" title="點擊圈選畫面，拖曳可移動，按右鍵開啟選單（含結束）">
+        <span class="mascot-body">
+        <span class="sparkle sparkle-one">✦</span>
+        <span class="sparkle sparkle-two">✧</span>
+        <svg viewBox="0 0 100 100" role="img" aria-label="Screen Spirit 小精靈">
+          <defs>
+            <linearGradient id="spirit-fill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#fffdf7" />
+              <stop offset="1" stop-color="#c9c4f5" />
+            </linearGradient>
+          </defs>
+          <path d="M50 8c8 0 12 8 17 13 5 5 15 4 19 12s-1 14 1 21c2 8 10 13 7 22s-12 10-18 16c-6 6-7 17-16 19-8 2-14-6-22-8-8-2-18 3-24-3s-2-16-5-24C6 68-3 62 0 53s14-12 18-19c4-7 3-18 11-22 7-4 14 2 21-1Z" transform="translate(4 2) scale(.92)" fill="url(#spirit-fill)" stroke="#8c85cb" stroke-width="2.5" />
+          <ellipse cx="39" cy="48" rx="4" ry="5" fill="#3b3955" />
+          <ellipse cx="61" cy="48" rx="4" ry="5" fill="#3b3955" />
+          <path d="M43 62q7 7 14 0" fill="none" stroke="#6f5f9d" stroke-width="3" stroke-linecap="round" />
+          <circle cx="29" cy="57" r="5" fill="#efb4c5" opacity=".7" />
+          <circle cx="71" cy="57" r="5" fill="#efb4c5" opacity=".7" />
+        </svg>
+        </span>
+      </button>
+      <div class="label">Screen Spirit</div>
+      <div class="actions">
+        <button id="select-screen" type="button">圈選</button>
+        <button id="clipboard-question" type="button" title="反白一段文字後按 ⌘⇧2；沒有反白時改用剪貼簿內容">反白文字</button>
+        <button id="open-chat" type="button" aria-label="開啟對話">對話</button>
+      </div>
+      <div class="hotkey">圈選 ⌘⇧1 · 反白文字 ⌘⇧2</div>
+      <div id="status" class="status" role="status"></div>
+    </main>
+    <script type="module" src="./companion.mjs"></script>
+  </body>
+</html>

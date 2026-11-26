@@ -1,0 +1,16 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+.handle {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 0; border: 1px solid #d9d5f2; border-right: 0; border-radius: 12px 0 0 12px;
+  color: #6c64b5; background: #fbfaffee; box-shadow: -3px 4px 14px #4d468a2e; cursor: pointer;
+  transition: transform .18s cubic-bezier(.2, .8, .2, 1), background .18s ease;
+  transform: translateX(6px);
+}
+.handle:hover { transform: translateX(0); background: #ffffff; }
+.spark { font-size: 14px; line-height: 1; }
+.chevron { font-size: 16px; line-height: 1; font-weight: 600; }
+.badge { position: absolute; top: 9px; left: 6px; width: 8px; height: 8px; border-radius: 50%; background: #e0566d; box-shadow: 0 0 0 2px #fff; animation: pulse 1.4s ease-in-out infinite; }
+.badge[hidden] { display: none; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .badge { animation: none; } .handle { transition: none; } }

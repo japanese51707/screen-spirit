@@ -1,0 +1,86 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+body { -webkit-app-region: drag; }
+
+/*
+  流暢度原則：
+  1. 版面在收合／展開兩種狀態完全相同，不改 width、height、padding、align-items（這些會觸發重新排版，而且 align-items 根本無法過渡，會直接跳位）。
+  2. 小精靈只用 transform（位移＋縮放＋旋轉）在兩個位置之間移動，交給 GPU 合成。
+  3. 狀態位移放在按鈕 .mascot，漂浮動畫放在內層 .mascot-body，兩者不互相覆蓋，切換狀態時漂浮不會重新開始。
+  4. 陰影固定不變，不做 filter 過渡（filter 過渡每一格都要重新算模糊）。
+*/
+.companion { position: relative; width: 166px; height: 184px; padding: 6px 8px 5px; display: flex; flex-direction: column; align-items: center; border-radius: 20px; color: #514c6b; text-align: center; }
+
+/* ---- 小精靈 ---- */
+.mascot {
+  position: relative; width: 96px; height: 96px; flex: 0 0 auto; padding: 0; border: 0; background: transparent;
+  cursor: grab; touch-action: none; -webkit-app-region: no-drag;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  /* 展開：帶一點回彈的彈出感 */
+  transition: transform .44s cubic-bezier(.34, 1.42, .52, 1), opacity .2s ease;
+}
+.mascot-body {
+  position: absolute; inset: 0; display: block;
+  will-change: transform;
+  animation: float 3.4s ease-in-out infinite;
+  transition: scale .22s cubic-bezier(.2, .8, .2, 1);
+}
+.mascot svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 7px 8px #544d8530); }
+.mascot:hover .mascot-body { scale: 1.06; }
+.mascot.dragging { cursor: grabbing; }
+.mascot.dragging .mascot-body { animation-play-state: paused; }
+/* 收合時大半躲在螢幕外，暫停漂浮：閒置時不必每格重繪；展開時從暫停的位置接著漂，不會跳。 */
+.collapsed .mascot-body { animation-play-state: paused; }
+
+.sparkle { position: absolute; color: #a29bdb; font-size: 18px; pointer-events: none; }
+.sparkle-one { top: 8px; left: 2px; }
+.sparkle-two { top: 24px; right: 3px; font-size: 14px; }
+
+/*
+  收合位置：原本是 76px、靠右下、再往右推 34px。
+  展開時中心 (83, 54)，收合時中心 (162, 146)，縮放 76/96 ≈ .79。
+  若改了視窗或小精靈尺寸，這組數字要一起改。
+*/
+.collapsed .mascot {
+  transform: translate(79px, 92px) rotate(-5deg) scale(.79);
+  opacity: .96;
+  /* 收合：比展開快、不回彈，感覺「縮回去」 */
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), opacity .2s ease;
+}
+
+/* ---- 文字與按鈕 ---- */
+.label, .actions, .hotkey, .status {
+  /* 展開時：等小精靈先移動一小段再淡入，層次比較清楚 */
+  transition: opacity .22s ease .1s, transform .3s cubic-bezier(.2, .9, .3, 1.15) .1s, visibility 0s linear 0s;
+}
+.label { margin-top: -1px; font-size: 11px; font-weight: 700; letter-spacing: .02em; text-shadow: 0 1px 5px #fff; }
+.actions { display: flex; gap: 3px; margin-top: 7px; -webkit-app-region: no-drag; }
+.actions button { padding: 5px 6px; border: 1px solid #e3e0f2; border-radius: 12px; color: #5b5674; background: #fffefaed; font-size: 9px; font-weight: 650; cursor: pointer; box-shadow: 0 2px 8px #544d8514; }
+.actions button:hover { background: #f0eefb; }
+.hotkey { margin-top: 3px; color: #89849f; font-size: 8px; white-space: nowrap; }
+.status { max-width: 148px; margin-top: 2px; color: #90543f; font-size: 9px; line-height: 1.25; }
+
+.collapsed .label, .collapsed .actions, .collapsed .hotkey, .collapsed .status {
+  opacity: 0; visibility: hidden; transform: translateY(8px) scale(.96); pointer-events: none;
+  /* 收合時：立刻淡出，淡出完才隱藏 */
+  transition: opacity .14s ease, transform .2s ease, visibility 0s linear .2s;
+}
+
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+
+/* 系統設定「減少動態效果」時，只保留淡入淡出 */
+@media (prefers-reduced-motion: reduce) {
+  .mascot, .collapsed .mascot { transition: opacity .2s ease; }
+  .mascot-body { animation: none; }
+}
+
+/* 有精靈造型時：藏起原本的小精靈圖與星星；陰影改加在造型上（固定不做動畫） */
+.has-skin .mascot svg, .has-skin .sparkle { display: none; }
+.mascot .skin-view { filter: drop-shadow(0 7px 8px #544d8530); }
+
+/* 換造型：縮小再彈回來（漂浮動畫不中斷：同名的 float 會接著跑） */
+.mascot-body.swap { animation: float 3.4s ease-in-out infinite, spirit-swap .5s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes spirit-swap { 0% { scale: .55; opacity: .2; } 70% { scale: 1.08; opacity: 1; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .mascot-body.swap { animation: none; } }

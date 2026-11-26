@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>固定 AI 抽屜</title>
+    <link rel="stylesheet" href="./drawer-pin.css" />
+  </head>
+  <body>
+    <button id="pin" class="pin" type="button" aria-pressed="false" aria-label="固定 AI 抽屜" title="固定：不自動收起，左邊的程式讓出位置">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3l6 6-3 1-4 4 .5 4.5L12 21l-4-4-5 5-1-1 5-5-4-4 2.5-2.5L10 10l4-4 1-3z" /></svg>
+    </button>
+    <script type="module" src="./drawer-pin.mjs"></script>
+  </body>
+</html>

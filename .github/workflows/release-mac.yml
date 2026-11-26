@@ -1,0 +1,39 @@
+# 放到專案的 .github/workflows/release-mac.yml 才會生效（GitHub 只讀那個位置）。
+# 在 GitHub 上自動打包 macOS App：推送 v 開頭的標籤（例如 v0.2.0）就會建好 App，放到該版本的 Releases。
+# 也可以到 Actions 分頁手動按「Run workflow」，打包結果在那次執行的 Artifacts 下載。
+name: 打包 macOS App
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-14   # Apple Silicon（arm64）
+    permissions:
+      contents: write   # 上傳到 Releases 需要
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: 安裝套件
+        run: npm ci
+      - name: 打包
+        run: npm run package:screen-spirit
+      - name: 臨時簽名、壓縮
+        run: |
+          APP="out/Screen Spirit-darwin-arm64/Screen Spirit.app"
+          codesign --force --deep --sign - "$APP"
+          ditto -c -k --keepParent "$APP" Screen-Spirit-mac-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Screen-Spirit-mac-arm64
+          path: Screen-Spirit-mac-arm64.zip
+      - name: 放到 Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Screen-Spirit-mac-arm64.zip
