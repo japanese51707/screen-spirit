@@ -25,6 +25,7 @@ import { prepareSpiritRun, withPastedInstructions } from './spirit-runtime.mjs';
 import { setupWorkflow } from './workflow-main.mjs';
 import { probeOllama, streamOllamaChat } from './ollama.mjs';
 import { availability, CATALOG, detectIntegrations, loadConsent, saveConsent } from './integrations.mjs';
+import { isLanguage, setLanguage, suggestLanguage, tr } from './i18n.mjs';
 import { buildUserMessage, extractImagePrompt, generateMixRouteImage, listMixRouteModelEntries, pickDefaultModel, streamMixRouteChat } from './mixroute.mjs';
 import { imageSupport, MODEL_KIND_LABEL, modelKind } from './model-capabilities.mjs';
 import { captureWindowSnapshot, computeSelectionContext, frontmostApplication, lastSnapshotError } from './window-context.mjs';
@@ -44,6 +45,17 @@ const appId = 'screen-spirit-chatgpt-plan-poc';
 app.setName('Screen Spirit ChatGPT Plan PoC');
 app.setPath('userData', join(app.getPath('appData'), 'Screen Spirit ChatGPT Plan PoC'));
 const preferencesPath = join(app.getPath('userData'), 'preferences.json');
+// 介面語言：第一次使用時選；還沒選之前，台灣地區用繁體中文、其他地區用英文
+const languagePath = join(app.getPath('userData'), 'language.json');
+let language = { current: 'zh-TW', decided: false, suggested: 'zh-TW' };
+async function loadLanguage() {
+  const locales = [app.getSystemLocale?.(), ...(app.getPreferredSystemLanguages?.() || []), app.getLocale()];
+  const suggested = suggestLanguage(locales);
+  let saved = {};
+  try { saved = JSON.parse(await readFile(languagePath, 'utf8')); } catch {}
+  language = isLanguage(saved.language) ? { current: saved.language, decided: true, suggested } : { current: suggested, decided: false, suggested };
+  setLanguage(language.current);
+}
 const clipboardFingerprintPath = join(app.getPath('userData'), 'last-clipboard-fingerprint');
 const deliveryTargetsPath = join(app.getPath('userData'), 'delivery-targets.json');
 // 診斷紀錄：開發版寫在專案的 logs/，方便直接查看；只記步驟、耗時、錯誤與程式名稱，不記問題內容。
@@ -133,7 +145,7 @@ function snapshot() {
     messages: conversation.messages,
     deliveryTargets: allTargets().map((target) => ({
       id: target.id,
-      label: target.label,
+      label: tr(target.label), // 介面語言是英文時，名稱也換成英文
       readsBack: target.kind === 'cli' || target.kind === 'api' || target.readBack === 'ax',
       kind: target.kind || 'app',
       image: target.kind === 'api' || target.kind === 'ollama' ? undefined : imageSupportFor(target),
@@ -142,6 +154,7 @@ function snapshot() {
       noDock: Boolean(target.noDock),
       ...targetAvailability(target.id),
     })),
+    language: { ...language },
     integrations: {
       decided: consent.decided,
       detecting,
@@ -151,16 +164,16 @@ function snapshot() {
       builtin: availability('builtin', detection, consent),
       items: CATALOG.map((item) => ({
         id: item.id,
-        label: item.id === 'builtin' ? '小精靈內建（ChatGPT 方案）' : (findTarget(item.id)?.label || item.id),
-        group: item.group,
-        note: item.note,
+        label: tr(item.id === 'builtin' ? '小精靈內建（ChatGPT 方案）' : (findTarget(item.id)?.label || item.id)),
+        group: tr(item.group),
+        note: tr(item.note),
         installed: Boolean(detection[item.id]?.installed),
-        detail: detection[item.id]?.detail || (detecting ? '偵測中…' : ''),
+        detail: tr(detection[item.id]?.detail || (detecting ? '偵測中…' : '')),
         enabled: consent.enabled?.[item.id] === true,
         loggedIn: detection[item.id]?.loggedIn ?? null,
         isNew: consent.decided && consent.enabled?.[item.id] === undefined, // 上次設定之後才新增的 AI
         unsupported: Boolean(detection[item.id]?.unsupported),
-        install: item.install || null,
+        install: item.install ? { ...item.install, label: tr(item.install.label) } : null,
       })),
     },
     ollama: {
@@ -917,21 +930,21 @@ ipcMain.handle('companion:open-chat', (event) => {
 // 小精靈選單（SPEC R-MENU-01）：選單列圖示與小精靈右鍵共用同一份。
 function buildSpiritMenu() {
   return Menu.buildFromTemplate([
-    { label: '圈選畫面', accelerator: 'CommandOrControl+Shift+1', registerAccelerator: false, click: () => void beginScreenSelection() },
-    { label: '用反白文字提問（也可直接按 ⌘⇧2）', accelerator: 'CommandOrControl+Shift+2', registerAccelerator: false, click: () => void beginClipboardQuestion() },
-    { label: '開啟對話視窗', click: () => openChatWindow() },
-    { label: drawer.isHidden() ? '打開 AI 抽屜（⌘⇧9）' : '收起 AI 抽屜（⌘⇧9）', enabled: drawer.isActive(), click: () => void drawer.toggle() },
-    { label: '固定 AI 抽屜（不自動收起、左邊讓出位置）', type: 'checkbox', checked: drawer.isPinned(), enabled: drawer.isActive(), click: (item) => void drawer.setPinned(item.checked) },
-    { label: '還原並排的視窗', enabled: dockedWindows.size > 0, click: () => void restoreDockedWindows() },
+    { label: tr('圈選畫面'), accelerator: 'CommandOrControl+Shift+1', registerAccelerator: false, click: () => void beginScreenSelection() },
+    { label: tr('用反白文字提問（也可直接按 ⌘⇧2）'), accelerator: 'CommandOrControl+Shift+2', registerAccelerator: false, click: () => void beginClipboardQuestion() },
+    { label: tr('開啟對話視窗'), click: () => openChatWindow() },
+    { label: tr(drawer.isHidden() ? '打開 AI 抽屜（⌘⇧9）' : '收起 AI 抽屜（⌘⇧9）'), enabled: drawer.isActive(), click: () => void drawer.toggle() },
+    { label: tr('固定 AI 抽屜（不自動收起、左邊讓出位置）'), type: 'checkbox', checked: drawer.isPinned(), enabled: drawer.isActive(), click: (item) => void drawer.setPinned(item.checked) },
+    { label: tr('還原並排的視窗'), enabled: dockedWindows.size > 0, click: () => void restoreDockedWindows() },
     {
-      label: '並排方式',
+      label: tr('並排方式'),
       submenu: [
-        { label: '抽屜：點其他程式時 AI 自動收進右邊', type: 'radio', checked: layoutMode === 'drawer', click: () => void setLayoutMode('drawer') },
-        { label: '固定並排：左 2/3、右 1/3', type: 'radio', checked: layoutMode === 'split', click: () => void setLayoutMode('split') },
+        { label: tr('抽屜：點其他程式時 AI 自動收進右邊'), type: 'radio', checked: layoutMode === 'drawer', click: () => void setLayoutMode('drawer') },
+        { label: tr('固定並排：左 2/3、右 1/3'), type: 'radio', checked: layoutMode === 'split', click: () => void setLayoutMode('split') },
       ],
     },
     { type: 'separator' },
-    { label: '結束 Screen Spirit', accelerator: 'CommandOrControl+Q', registerAccelerator: false, click: () => app.quit() },
+    { label: tr('結束 Screen Spirit'), accelerator: 'CommandOrControl+Q', registerAccelerator: false, click: () => app.quit() },
   ]);
 }
 
@@ -1220,6 +1233,16 @@ handle('open-install-link', async (id) => {
   const url = CATALOG.find((item) => item.id === id)?.install?.url;
   if (!url || !/^https:\/\//.test(url)) return { ok: false };
   await shell.openExternal(url);
+  return { ok: true };
+});
+// 介面語言：存起來、更新選單；畫面那邊會自己重新載入
+handle('language-set', async (lang) => {
+  if (!isLanguage(lang)) return { ok: false };
+  await writeFile(languagePath, JSON.stringify({ language: lang }, null, 2), 'utf8');
+  language = { ...language, current: lang, decided: true };
+  setLanguage(lang);
+  if (tray) tray.setContextMenu(buildSpiritMenu());
+  publish();
   return { ok: true };
 });
 // 螢幕錄製權限要重開才生效
@@ -3165,6 +3188,7 @@ if (skinTestIndex >= 0) {
     await loadDesktopSpirit();
     void refreshMixRouteStatus(); // 有存金鑰就在背景載入模型清單
     consent = await loadConsent(consentPath);
+    await loadLanguage();
     await seedSpiritsIfFresh();
     void runDetection(); // 偵測這台電腦上有哪些 AI（在背景進行，完成後更新畫面）
     state.presentationMode = await loadPresentationMode(preferencesPath);

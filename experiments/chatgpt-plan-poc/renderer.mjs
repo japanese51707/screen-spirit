@@ -1,4 +1,6 @@
 import { createSpiritLab } from './spirit-lab.mjs';
+import { getLanguage, L, LANGUAGES, setLanguage, tr } from './i18n.mjs';
+import { installTranslator } from './i18n-dom.mjs';
 import { createWorkflowView } from './workflow.mjs';
 
 const bridge = window.screenSpirit;
@@ -177,8 +179,9 @@ function spiritHint() {
   if (!spirit) return '';
   const steps = spirit.sop.steps.filter((step) => step.title.trim()).length;
   const draws = spirit.ai.imageModel || (state?.mixroute?.kinds?.[spirit.ai.model] === 'image');
-  const parts = ['角色與限制', steps ? `${steps} 步 SOP` : '', spirit.memory.home ? '資料庫' : '', draws ? '會畫圖' : ''].filter(Boolean).join('、');
-  return `🧙 由「${spirit.name}」處理（${parts}${spirit.memory.mode === 'persistent' ? '，結束後整理記憶' : ''}）。${spiritNote}`;
+  const parts = [L('角色與限制', 'role & limits'), steps ? L(`${steps} 步 SOP`, `${steps}-step SOP`) : '', spirit.memory.home ? L('資料庫', 'knowledge base') : '', draws ? L('會畫圖', 'draws images') : ''].filter(Boolean).join(L('、', ', '));
+  return L(`🧙 由「${spirit.name}」處理（${parts}${spirit.memory.mode === 'persistent' ? '，結束後整理記憶' : ''}）。${spiritNote}`,
+    `🧙 Handled by "${spirit.name}" (${parts}${spirit.memory.mode === 'persistent' ? ', saves memories afterwards' : ''}). ${spiritNote}`);
 }
 
 /** 派精靈工作：開一段新的對話（不用先圈選），選好精靈直接輸入要求 */
@@ -239,7 +242,7 @@ function renderProjectOptions(target) {
   const items = list || [];
   const signature = JSON.stringify([target.id, items.map((item) => item.path)]);
   if (selectionProject.dataset.signature !== signature) {
-    const current = new Option(`${target.label.replace(/（.*）/, '')} 目前的視窗（不切換專案）`, PROJECT_CURRENT);
+    const current = new Option(L(`${target.label.replace(/\s*[（(].*[）)]/, '')} 目前的視窗（不切換專案）`, `${target.label.replace(/\s*[（(].*[）)]/, '')}'s current window (don't switch project)`), PROJECT_CURRENT);
     const recent = document.createElement('optgroup');
     recent.label = items.length ? '最近的專案' : '（還沒有最近的專案）';
     recent.append(...items.map((item) => {
@@ -306,7 +309,7 @@ function imageSupportOf(target = currentTarget()) {
 // 提示文字裡「附上什麼」：不能看圖的目標會改送圖片中的文字
 function imagePart(target = currentTarget()) {
   if (!selectedImage) return '';
-  return imageSupportOf(target) === 'no' ? '圖片中的文字（OCR）、' : '圈選圖片、';
+  return imageSupportOf(target) === 'no' ? L('圖片中的文字（OCR）、', 'the text in the image (OCR), ') : L('圈選圖片、', 'the selected image, ');
 }
 
 function suggestVisionModel() {
@@ -317,15 +320,16 @@ function suggestVisionModel() {
 function visionHint(target = currentTarget()) {
   if (!selectedImage || !target || target.id === BUILTIN_TARGET) return '';
   const support = imageSupportOf(target);
-  const who = MODEL_KINDS.has(target.kind) ? `模型 ${selectionModel.value}` : target.label.replace(/（.*）/, '');
+  const who = MODEL_KINDS.has(target.kind) ? L(`模型 ${selectionModel.value}`, `Model ${selectionModel.value}`) : target.label.replace(/\s*[（(].*[）)]/, '');
   if (support === 'no') {
     const alternative = MODEL_KINDS.has(target.kind) ? suggestVisionModel() : '';
-    return `⚠︎ ${who} 不能看圖片：會改送圖片中辨識出的文字（本機 OCR）${alternative ? `；想讓 AI 直接看圖，可以換成 ${alternative}` : ''}。`;
+    return L(`⚠︎ ${who} 不能看圖片：會改送圖片中辨識出的文字（本機 OCR）${alternative ? `；想讓 AI 直接看圖，可以換成 ${alternative}` : ''}。`,
+      `⚠︎ ${who} can't read images: the text recognized in the image (local OCR) will be sent instead${alternative ? `. To let the AI see the image, switch to ${alternative}` : ''}.`);
   }
   if (support === 'unknown') {
     return target.kind === 'api'
-      ? `不確定 ${who} 能不能看圖片：會先送圖片，不行的話自動改送圖片中的文字。`
-      : `不確定 ${who} 能不能看圖片：圖片會照常貼上。`;
+      ? L(`不確定 ${who} 能不能看圖片：會先送圖片，不行的話自動改送圖片中的文字。`, `Not sure whether ${who} can read images: the image is sent first, and the recognized text is sent instead if that fails.`)
+      : L(`不確定 ${who} 能不能看圖片：圖片會照常貼上。`, `Not sure whether ${who} can read images: the image will be pasted as usual.`);
   }
   return '';
 }
@@ -336,11 +340,11 @@ function openApiKeyDialog() {
   apiKeyInput.value = '';
   apiKeyError.textContent = mixroute.error || '';
   apiKeyCurrent.hidden = !mixroute.hasKey;
-  apiKeyCurrent.textContent = mixroute.hasKey ? `目前已存的金鑰：${mixroute.keyHint}。輸入新的金鑰會取代它。` : '';
+  apiKeyCurrent.textContent = mixroute.hasKey ? L(`目前已存的金鑰：${mixroute.keyHint}。輸入新的金鑰會取代它。`, `Saved key: ${mixroute.keyHint}. Entering a new key replaces it.`) : '';
   apiKeyClear.hidden = !mixroute.hasKey;
   const blockedCount = Object.keys(mixroute.blocked || {}).length;
   apiKeyBlocked.hidden = !blockedCount;
-  apiKeyBlockedText.textContent = blockedCount ? `已標記 ${blockedCount} 個模型為「此帳號不可用」。` : '';
+  apiKeyBlockedText.textContent = blockedCount ? L(`已標記 ${blockedCount} 個模型為「此帳號不可用」。`, `${blockedCount} model(s) marked as "not available for this account".`) : '';
   apiKeySave.disabled = false;
   apiKeySave.textContent = '驗證並儲存';
   if (!apiKeyDialog.open) apiKeyDialog.showModal();
@@ -370,7 +374,7 @@ function renderModelOptions(target = currentTarget()) {
       const usableGroup = document.createElement('optgroup');
       usableGroup.label = unusable.length ? '可以用' : '模型';
       const support = mixroute.imageSupport || {};
-      usableGroup.append(...usable.map((id) => new Option(support[id] === 'no' ? `${id}（不支援圖片）` : id, id)));
+      usableGroup.append(...usable.map((id) => new Option(support[id] === 'no' ? L(`${id}（不支援圖片）`, `${id} (no images)`) : id, id)));
       groups.push(usableGroup);
       if (unusable.length) {
         const unusableGroup = document.createElement('optgroup');
@@ -382,7 +386,7 @@ function renderModelOptions(target = currentTarget()) {
         const notChatGroup = document.createElement('optgroup');
         notChatGroup.label = '不能對話（生圖、影片、語音等專用模型）';
         notChatGroup.append(...notChat.map((id) => {
-          const option = new Option(`${id}（${KIND_LABEL[kinds[id]] || '專用模型'}）`, id);
+          const option = new Option(L(`${id}（${KIND_LABEL[kinds[id]] || '專用模型'}）`, `${id} (${tr(KIND_LABEL[kinds[id]] || '專用模型')})`), id);
           option.disabled = true;
           return option;
         }));
@@ -397,7 +401,7 @@ function renderModelOptions(target = currentTarget()) {
   // 記住的模型被標記不可用時，自動換成可以用的預設模型（追問中的對話不換）
   if (!lockedModel && (blocked[wanted] || kinds[wanted]) && mixroute.defaultModel) wanted = mixroute.defaultModel;
   selectionModel.value = models.includes(wanted) ? wanted : (mixroute.defaultModel || models[0] || '');
-  selectionModel.title = blocked[selectionModel.value] ? `之前失敗：${blocked[selectionModel.value]}` : '';
+  selectionModel.title = blocked[selectionModel.value] ? L(`之前失敗：${blocked[selectionModel.value]}`, `Failed before: ${blocked[selectionModel.value]}`) : '';
 }
 
 apiKeyForm.addEventListener('submit', async (event) => {
@@ -463,7 +467,7 @@ function renderTargetOptions() {
   const signature = JSON.stringify([targets, builtin, defaultId]);
   if (selectionTarget.dataset.signature !== signature) {
     const option = (label, value, available, reason) => {
-      const shown = available && value === defaultId ? `${label}・預設` : label;
+      const shown = available && value === defaultId ? L(`${label}・預設`, `${label} · default`) : label;
       const element = new Option(available ? shown : `${label}（${reason}）`, value);
       element.disabled = !available;
       return element;
@@ -492,12 +496,13 @@ function renderContext() {
     const chip = document.createElement('span');
     chip.className = 'context-chip';
     const label = document.createElement('span');
+    label.dataset.i18nSkip = ''; // 視窗標題不翻譯
     label.textContent = describeContext(item);
     label.title = describeContext(item);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = '×';
-    remove.setAttribute('aria-label', `不要附帶 ${item.app}`);
+    remove.setAttribute('aria-label', L(`不要附帶 ${item.app}`, `Don't include ${item.app}`));
     remove.addEventListener('click', () => {
       selectedContext = selectedContext.filter((_, i) => i !== index);
       renderContext();
@@ -521,7 +526,7 @@ function appendMessage(message) {
 
   const label = document.createElement('div');
   label.className = 'message-label';
-  label.textContent = message.role === 'user' ? '你' : (message.label || 'ChatGPT');
+  label.textContent = message.role === 'user' ? '你' : tr(message.label || 'ChatGPT');
   article.append(label);
 
   const bubble = document.createElement('div');
@@ -538,12 +543,14 @@ function appendMessage(message) {
     const label = document.createElement('strong');
     label.textContent = '反白／複製的文字';
     const content = document.createElement('div');
+    content.dataset.i18nSkip = ''; // 使用者的內容不翻譯
     content.textContent = message.sourceText;
     source.append(label, content);
     bubble.append(source);
   }
   if (message.text) {
     const text = document.createElement('span');
+    text.dataset.i18nSkip = ''; // 問答內容不翻譯
     text.textContent = message.text;
     bubble.append(text);
   }
@@ -601,15 +608,15 @@ function generatedImageActions(message) {
   const spiritId = state?.conversation?.spiritId;
   const spirit = spiritList.find((item) => item.id === spiritId);
   bar.append(button('💾 存成檔案', async () => {
-    const result = await bridge.saveImage({ dataUrl: message.imageDataUrl, name: `${spirit?.name || '小精靈'}的圖` });
-    return result?.ok ? `已存到 ${result.path.split('/').slice(-2).join('/')}` : '';
+    const result = await bridge.saveImage({ dataUrl: message.imageDataUrl, name: L(`${spirit?.name || '小精靈'}的圖`, `${spirit?.name || 'Screen Spirit'} image`) });
+    return result?.ok ? L(`已存到 ${result.path.split(/[\\/]/).slice(-2).join('/')}`, `Saved to ${result.path.split(/[\\/]/).slice(-2).join('/')}`) : '';
   }));
   if (spirit) {
     bar.append(button('🃏 設為精靈卡面', async () => {
       const image = await toCardImage(message.imageDataUrl);
       const saved = await bridge.spiritsSave({ ...spirit, look: { ...spirit.look, image } });
       spiritList = spiritList.map((item) => (item.id === saved.id ? saved : item));
-      return `已設為「${spirit.name}」的卡面 ✓`;
+      return L(`已設為「${spirit.name}」的卡面 ✓`, `Set as "${spirit.name}"'s card image ✓`);
     }));
   }
   if (message.prompt) {
@@ -711,14 +718,15 @@ function render() {
     'not-determined': '首次圈選時詢問螢幕錄製權限',
     unknown: '螢幕錄製權限狀態未知',
   };
-  const hotkeyStatus = `圈選 ⌘⇧1 ${state.selectionHotkeyRegistered ? '已註冊' : '未註冊'} · 反白文字 ⌘⇧2 ${state.clipboardHotkeyRegistered ? '已註冊' : '未註冊'}`;
-  selectionStatus.textContent = `${hotkeyStatus} · ${permissionLabels[state.screenPermissionStatus] || permissionLabels.unknown}（開發原型在系統清單可能顯示為 Electron）`;
+  const on = (flag) => (flag ? L('已註冊', 'on') : L('未註冊', 'off'));
+  const hotkeyStatus = L(`圈選 ⌘⇧1 ${on(state.selectionHotkeyRegistered)} · 反白文字 ⌘⇧2 ${on(state.clipboardHotkeyRegistered)}`, `Select ⌘⇧1 ${on(state.selectionHotkeyRegistered)} · Text ⌘⇧2 ${on(state.clipboardHotkeyRegistered)}`);
+  selectionStatus.textContent = `${hotkeyStatus} · ${tr(permissionLabels[state.screenPermissionStatus] || permissionLabels.unknown)}${L('（開發原型在系統清單可能顯示為 Electron）', ' (in development mode it may be listed as Electron)')}`;
   const connected = state.session.status === 'connected';
   const ready = connected && state.session.sharing;
   statusDot.className = `status-dot ${ready ? 'connected' : state.session.status === 'connecting' ? 'pending' : ''}`;
   if (ready) {
     statusLabel.textContent = state.session.identity?.email
-      ? `已連接 ${state.session.identity.email} · 方案用量已授權`
+      ? L(`已連接 ${state.session.identity.email} · 方案用量已授權`, `Connected as ${state.session.identity.email} · plan usage authorized`)
       : '已連接 · 方案用量已授權';
     connectButton.hidden = true;
   } else if (connected) {
@@ -760,7 +768,7 @@ function render() {
   selectionAutoSubmit.parentElement.hidden = !external || target?.kind !== 'app' || targetReadsBack(target) || isDocking(target) || Boolean(target?.manualSubmit);
   selectionQuestionSendButton.disabled = !canSendSelectionQuestion();
   // 只貼上不送出的目標（Kiro）：按鈕寫清楚是「貼到」
-  selectionQuestionSendButton.textContent = external && target?.manualSubmit ? `貼到 ${target.label.replace(/（.*）/, '')}` : '送出';
+  selectionQuestionSendButton.textContent = external && target?.manualSubmit ? L(`貼到 ${target.label.replace(/\s*[（(].*[）)]/, '')}`, `Paste into ${target.label.replace(/\s*[（(].*[）)]/, '')}`) : L('送出', 'Send');
   selectionQuestionConnectButton.hidden = ready || external;
   selectionQuestionConnectButton.disabled = state.session.status === 'connecting' || state.busy;
   selectionQuestionConnectButton.textContent = state.session.status === 'connecting'
@@ -769,39 +777,47 @@ function render() {
       ? '重新連接 ChatGPT'
       : connected ? '授權方案用量' : '連接 ChatGPT';
   selectionQuestionHint.dataset.error = String(Boolean(state.error));
-  const targetLabel = (selectionTarget.selectedOptions[0]?.textContent || '').replace(/・預設$/, '');
+  const targetLabel = (selectionTarget.selectedOptions[0]?.textContent || '').replace(/(・預設| · default)$/, '');
   const following = Boolean(lockedTargetId());
   let deliveryHint;
   if (state.busy && targetReadsBack(target)) {
-    deliveryHint = `正在等 ${targetLabel} 回覆…（按 Esc 可停止並收起對話）`;
+    deliveryHint = L(`正在等 ${targetLabel} 回覆…（按 Esc 可停止並收起對話）`, `Waiting for ${targetLabel} to reply… (press Esc to stop and close)`);
   } else if (state.delivering) {
-    deliveryHint = `正在送到 ${targetLabel}…請先不要操作滑鼠與鍵盤。`;
+    deliveryHint = L(`正在送到 ${targetLabel}…請先不要操作滑鼠與鍵盤。`, `Sending to ${targetLabel}… please don't use the mouse or keyboard for a moment.`);
   } else if (following) {
     const followModel = state.conversation?.delivery?.model || selectionModel.value;
-    const followName = target?.kind === 'api' ? `MixRoute（${followModel}）` : target?.kind === 'ollama' ? `Ollama（${followModel}）` : targetLabel.replace(/（.*）/, '');
+    const followName = target?.kind === 'api' ? `MixRoute（${followModel}）` : target?.kind === 'ollama' ? `Ollama（${followModel}）` : targetLabel.replace(/\s*[（(].*[）)]/, '');
     deliveryHint = ['cli', 'api', 'ollama'].includes(target?.kind)
-      ? `追問會接續同一段 ${followName} 對話。`
-      : `追問會送進 ${targetLabel} 目前開著的那段對話（請不要在 Claude 裡切換到別的對話）。`;
+      ? L(`追問會接續同一段 ${followName} 對話。`, `Follow-ups continue the same ${followName} conversation.`)
+      : L(`追問會送進 ${targetLabel} 目前開著的那段對話（請不要在 Claude 裡切換到別的對話）。`, `Follow-ups go to the conversation currently open in ${targetLabel} (don't switch to another conversation there).`);
   } else if (target?.projectBased) {
     const project = selectedProject(target);
-    const app = targetLabel.replace(/（.*）/, '');
-    deliveryHint = `會打開 ${app}${project ? ` 的「${project.split('/').pop()}」專案` : '（不切換專案）'}，把${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題貼到對話框。${target.manualSubmit ? `不會自動送出，請在 ${app} 裡確認後自己按送出。` : ''}`;
+    const app = targetLabel.replace(/\s*[（(].*[）)]/, '');
+    deliveryHint = L(`會打開 ${app}${project ? ` 的「${project.split(/[\\/]/).pop()}」專案` : '（不切換專案）'}，把${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題貼到對話框。${target.manualSubmit ? `不會自動送出，請在 ${app} 裡確認後自己按送出。` : ''}`,
+      `Opens ${app}${project ? ` in the "${project.split(/[\\/]/).pop()}" project` : ' (without switching project)'} and pastes ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question into the chat box.${target.manualSubmit ? ` It won't send automatically — check it in ${app} and press send yourself.` : ''}`);
   } else if (isDocking(target)) {
-    deliveryHint = `會開啟 ${targetLabel}的新對話，貼上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題並送出，再把 ${target.label.replace(/（.*）/, '')} ${state.layoutMode === 'split'
+    deliveryHint = L(`會開啟 ${targetLabel}的新對話，貼上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題並送出，再把 ${target.label.replace(/\s*[（(].*[）)]/, '')} ${state.layoutMode === 'split'
       ? '放在右側 1/3、原本的程式放左側 2/3 並排'
-      : '放在右側 1/3（抽屜：點其他程式時自動收進右邊，點右邊緣把手或按 ⌘⇧9 再拉出來）'}，直接在裡面看回覆、繼續對話。`;
+      : '放在右側 1/3（抽屜：點其他程式時自動收進右邊，點右邊緣把手或按 ⌘⇧9 再拉出來）'}，直接在裡面看回覆、繼續對話。`,
+      `Opens a new chat in ${targetLabel}, pastes ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question, sends it, then puts ${target.label.replace(/\s*[（(].*[）)]/, '')} ${state.layoutMode === 'split'
+      ? 'on the right third with your original app on the left two-thirds'
+      : 'on the right third (drawer: it slides away when you click another app; click the handle on the right edge or press ⌘⇧9 to bring it back)'} so you can read the reply and keep chatting there.`);
   } else if (target?.kind === 'api') {
     deliveryHint = !state.mixroute?.hasKey
       ? '請先按「金鑰」輸入 MixRoute API 金鑰。'
-      : `會用 MixRoute 的 ${selectionModel.value || '（請選模型）'} 回答，附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`;
+      : L(`會用 MixRoute 的 ${selectionModel.value || '（請選模型）'} 回答，附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`,
+        `MixRoute's ${selectionModel.value || '(choose a model)'} will answer, with ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question attached. The reply shows here.`);
   } else if (target?.kind === 'ollama') {
     deliveryHint = !state.ollama?.running
       ? 'Ollama 沒有在執行：請先打開 Ollama App。'
-      : `會用這台 Mac 上的 ${selectionModel.value || '（請選模型）'} 回答（不用網路），附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`;
+      : L(`會用這台 Mac 上的 ${selectionModel.value || '（請選模型）'} 回答（不用網路），附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`,
+        `${selectionModel.value || '(choose a model)'} on this computer will answer (no internet needed), with ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question attached. The reply shows here.`);
   } else if (target?.kind === 'cli') {
-    deliveryHint = `會在背景用 ${targetLabel.replace(/（.*）/, '')} 回答，附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`;
+    deliveryHint = L(`會在背景用 ${targetLabel.replace(/\s*[（(].*[）)]/, '')} 回答，附上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題，回覆顯示在這裡。`,
+      `${targetLabel.replace(/\s*[（(].*[）)]/, '')} will answer in the background, with ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question attached. The reply shows here.`);
   } else {
-    deliveryHint = `會開啟 ${targetLabel}的新對話，貼上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題${targetReadsBack(target) || selectionAutoSubmit.checked ? '並送出' : '（不自動送出）'}${targetReadsBack(target) ? '，回覆會帶回這裡' : ''}。`;
+    deliveryHint = L(`會開啟 ${targetLabel}的新對話，貼上${imagePart(target)}${selectedContext.length ? '畫面脈絡、' : ''}問題${targetReadsBack(target) || selectionAutoSubmit.checked ? '並送出' : '（不自動送出）'}${targetReadsBack(target) ? '，回覆會帶回這裡' : ''}。`,
+      `Opens a new chat in ${targetLabel} and pastes ${imagePart(target)}${selectedContext.length ? 'the screen context, ' : ''}and your question${targetReadsBack(target) || selectionAutoSubmit.checked ? ', then sends it' : ' (without sending)'}${targetReadsBack(target) ? '. The reply comes back here' : ''}.`);
   }
   const vision = visionHint(target);
   selectionQuestionHint.dataset.warn = String(Boolean(vision) && imageSupportOf(target) === 'no' && !state.error);
@@ -854,15 +870,16 @@ const setupNext = document.querySelector('#setup-next');
 const setupSave = document.querySelector('#integrations-save');
 const setupCancel = document.querySelector('#integrations-cancel');
 const setupRedetect = document.querySelector('#integrations-redetect');
-const SETUP_TITLES = { welcome: '歡迎使用', permissions: '開啟系統權限', ai: '連接 AI', done: '完成' };
-const SETUP_HEADINGS = { welcome: '第一次使用設定', permissions: '開啟系統權限', ai: '要連接哪些 AI？', done: '完成設定' };
+const SETUP_TITLES = { language: 'Language／語言', welcome: '歡迎使用', permissions: '開啟系統權限', ai: '連接 AI', done: '完成' };
+const SETUP_HEADINGS = { language: 'Language／語言', welcome: '第一次使用設定', permissions: '開啟系統權限', ai: '要連接哪些 AI？', done: '完成設定' };
+let setupLanguage = ''; // 語言頁選的語言（按「下一步」才套用）
 let setupMode = 'manage'; // 'wizard' | 'manage'
 let setupPage = 'ai';
 let permissionInfo = null;
 
 const isMac = () => (state?.integrations?.platform || 'darwin') === 'darwin';
-const setupPages = () => (setupMode === 'wizard' ? (isMac() ? ['welcome', 'permissions', 'ai', 'done'] : ['welcome', 'ai', 'done']) : ['ai']);
-const platformName = () => ({ darwin: 'Mac', win32: 'Windows', linux: 'Linux' }[state?.integrations?.platform] || '這台電腦');
+const setupPages = () => (setupMode === 'wizard' ? (isMac() ? ['language', 'welcome', 'permissions', 'ai', 'done'] : ['language', 'welcome', 'ai', 'done']) : ['ai']);
+const platformName = () => ({ darwin: 'Mac', win32: 'Windows', linux: 'Linux' }[state?.integrations?.platform] || L('這台電腦', 'computer'));
 
 function openIntegrations() {
   const items = state?.integrations?.items || [];
@@ -871,7 +888,8 @@ function openIntegrations() {
   integrationsDefault = defaultTargetId();
   setupMode = state?.integrations?.decided ? 'manage' : 'wizard';
   const resume = readPreference(SETUP_STEP_KEY, '');
-  setupPage = setupMode === 'wizard' ? (setupPages().includes(resume) ? resume : 'welcome') : 'ai';
+  setupPage = setupMode === 'wizard' ? (setupPages().includes(resume) ? resume : 'language') : 'ai';
+  setupLanguage = getLanguage();
   showSetupPage();
   if (!integrationsDialog.open) integrationsDialog.showModal();
 }
@@ -882,7 +900,7 @@ function showSetupPage() {
   const index = pages.indexOf(setupPage);
   const wizard = setupMode === 'wizard';
   for (const page of integrationsDialog.querySelectorAll('.setup-page')) page.hidden = page.dataset.page !== setupPage;
-  document.querySelector('#setup-eyebrow').textContent = wizard ? `SCREEN SPIRIT・第一次使用設定 ${index + 1}/${pages.length}` : 'SCREEN SPIRIT';
+  document.querySelector('#setup-eyebrow').textContent = wizard ? L(`SCREEN SPIRIT・第一次使用設定 ${index + 1}/${pages.length}`, `SCREEN SPIRIT · FIRST-RUN SETUP ${index + 1}/${pages.length}`) : 'SCREEN SPIRIT';
   document.querySelector('#integrations-title').textContent = SETUP_HEADINGS[setupPage];
   setupSteps.hidden = !wizard;
   setupSteps.replaceChildren(...pages.map((page, i) => {
@@ -897,6 +915,7 @@ function showSetupPage() {
   setupSave.hidden = wizard && setupPage !== 'done';
   setupSave.textContent = wizard ? '開始使用' : '連接勾選的項目';
   setupCancel.textContent = wizard ? '稍後再設定' : '取消';
+  if (setupPage === 'language') renderSetupLanguages();
   if (setupPage === 'welcome') renderSetupWelcome();
   if (setupPage === 'permissions') void refreshPermissions();
   if (setupPage === 'ai') renderIntegrations();
@@ -911,17 +930,43 @@ function goSetup(delta) {
   showSetupPage();
 }
 setupBack.addEventListener('click', () => goSetup(-1));
-setupNext.addEventListener('click', () => goSetup(1));
+setupNext.addEventListener('click', () => void setupForward());
+async function setupForward() {
+  if (setupPage === 'language') {
+    const changed = setupLanguage !== getLanguage();
+    if (changed || !state?.language?.decided) await bridge.languageSet(setupLanguage);
+    if (changed) { writePreference(SETUP_STEP_KEY, 'welcome'); location.reload(); return; } // 換語言：重新載入畫面，從下一步接著設定
+  }
+  goSetup(1);
+}
+
+function renderSetupLanguages() {
+  const suggested = state?.language?.suggested || 'en';
+  document.querySelector('#setup-languages').replaceChildren(...LANGUAGES.map((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'setup-language';
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(setupLanguage === item.id));
+    const name = document.createElement('strong');
+    name.textContent = item.label;
+    const note = document.createElement('small');
+    note.textContent = item.id === suggested ? (item.id === 'en' ? 'Recommended for your region' : '依你的地區建議') : '';
+    button.append(name, note);
+    button.addEventListener('click', () => { setupLanguage = item.id; renderSetupLanguages(); });
+    return button;
+  }));
+}
 
 function renderSetupWelcome() {
   const card = document.querySelector('#setup-platform');
   const title = document.createElement('strong');
   const body = document.createElement('p');
   if (isMac()) {
-    title.textContent = `這台是 ${platformName()}：所有功能都可以使用`;
+    title.textContent = L(`這台是 ${platformName()}：所有功能都可以使用`, `This is a ${platformName()}: every feature is available`);
     body.textContent = '圈選螢幕、精靈博士、工作流，以及操作 Claude／ChatGPT 桌面版、Chrome 網頁、指令列 AI、雲端 API、本機模型都支援。';
   } else {
-    title.textContent = `這台是 ${platformName()}：部分功能目前只支援 macOS`;
+    title.textContent = L(`這台是 ${platformName()}：部分功能目前只支援 macOS`, `This is a ${platformName()} PC: some features are macOS-only for now`);
     body.textContent = '可以使用：背景執行（Claude Code、Codex、Gemini CLI）、雲端 API（MixRoute）、本機模型（Ollama），以及精靈博士與工作流。操作桌面 App 與 Chrome 網頁的連線目前只支援 macOS，清單裡會反灰並註明。';
   }
   card.replaceChildren(title, body);
@@ -930,7 +975,7 @@ function renderSetupWelcome() {
     : ['選擇要連接的 AI；沒安裝的可以直接點連結下載', '選一個「預設 AI」——精靈、工作流沒有特別指定時都用它'];
   document.querySelector('#setup-plan').replaceChildren(...plan.map((text, i) => {
     const item = document.createElement('li');
-    item.textContent = `${i + 1}. ${text}`;
+    item.textContent = `${i + 1}. ${tr(text)}`;
     return item;
   }));
 }
@@ -999,11 +1044,11 @@ function renderSetupSummary() {
   const label = (id) => info.items.find((item) => item.id === id)?.label || id;
   const rows = [
     ['預設 AI', chosen ? label(chosen) : '還沒有選（回上一步勾選至少一個 AI）'],
-    ['已連接', checked.length ? checked.map((item) => item.label).join('、') : '無'],
-    ['精靈資料庫', `${info.defaultKbRoot || '文件／Screen Spirit／精靈資料庫'}（每隻精靈一個資料夾；之後可以在精靈博士裡換到 Obsidian 或其他位置）`],
+    ['已連接', checked.length ? checked.map((item) => item.label).join(L('、', ', ')) : '無'],
+    ['精靈資料庫', L(`${info.defaultKbRoot || '文件／Screen Spirit／精靈資料庫'}（每隻精靈一個資料夾；之後可以在精靈博士裡換到 Obsidian 或其他位置）`, `${info.defaultKbRoot || 'Documents/Screen Spirit/精靈資料庫'} (one folder per spirit; you can move it to Obsidian or elsewhere in the Spirit Lab later)`)],
     ['範例精靈', '精靈博士裡附了「造型博士」：AI 跟著你的預設，可以直接拿來試、也可以改成你自己的精靈。'],
   ];
-  if (isMac()) rows.splice(2, 0, ['系統權限', PERMISSION_ROWS.map((row) => `${row.label}${permissionInfo?.[row.kind] === 'granted' ? ' ✓' : '（尚未開啟）'}`).join('、')]);
+  if (isMac()) rows.splice(2, 0, ['系統權限', PERMISSION_ROWS.map((row) => `${tr(row.label)}${permissionInfo?.[row.kind] === 'granted' ? ' ✓' : L('（尚未開啟）', ' (not on yet)')}`).join(L('、', ', '))]);
   document.querySelector('#setup-summary').replaceChildren(...rows.flatMap(([term, value]) => {
     const dt = document.createElement('dt');
     dt.textContent = term;
@@ -1036,7 +1081,8 @@ function renderIntegrations() {
   if (!checked.includes(integrationsDefault)) integrationsDefault = checked[0] || '';
   document.querySelector('#integrations-intro').textContent = isMac()
     ? '小精靈偵測到這台電腦上有下列 AI。請勾選你同意連接的項目，並在右邊選一個「預設」——每次圈選後會先送到它，精靈和工作流沒有特別指定 AI 時也用它。沒安裝的可以按旁邊的按鈕下載，裝好後按「重新偵測」。'
-    : `這台是 ${platformName()}：可以連接背景執行（指令列）、雲端 API 與本機模型；標示「目前只支援 macOS」的項目會反灰。請勾選要連接的項目，並選一個「預設」。沒安裝的可以按旁邊的按鈕下載，裝好後按「重新偵測」。`;
+    : L(`這台是 ${platformName()}：可以連接背景執行（指令列）、雲端 API 與本機模型；標示「目前只支援 macOS」的項目會反灰。請勾選要連接的項目，並選一個「預設」。沒安裝的可以按旁邊的按鈕下載，裝好後按「重新偵測」。`,
+      `This is a ${platformName()} PC: you can connect background CLI agents, cloud APIs and local models; items marked "macOS only" are greyed out. Tick the ones to connect and pick a "Default". For anything not installed, use the button next to it to download it, then press "Detect again".`);
   const groups = new Map();
   for (const item of info.items) {
     if (!groups.has(item.group)) groups.set(item.group, []);
@@ -1061,7 +1107,7 @@ function renderIntegrations() {
       const text = document.createElement('span');
       text.className = 'integration-text';
       const name = document.createElement('strong');
-      name.textContent = item.isNew && usableItem(item) ? `${item.label}　新` : item.label;
+      name.textContent = item.isNew && usableItem(item) ? L(`${item.label}　新`, `${item.label} · new`) : item.label;
       const status = document.createElement('span');
       status.className = 'integration-status';
       status.textContent = item.unsupported ? '目前只支援 macOS' : (item.detail || (info.detecting ? '偵測中…' : ''));
@@ -1082,7 +1128,7 @@ function renderIntegrations() {
       radio.checked = isDefault;
       radio.disabled = !usable;
       radio.tabIndex = usable ? 0 : -1;
-      radio.setAttribute('aria-label', `把 ${item.label} 設為預設`);
+      radio.setAttribute('aria-label', L(`把 ${item.label} 設為預設`, `Make ${item.label} the default`));
       pick.append(radio, document.createTextNode('預設'));
       pick.addEventListener('click', (event) => {
         event.preventDefault(); // 不要連帶切換左邊的勾選
@@ -1112,7 +1158,7 @@ function renderIntegrations() {
         login.type = 'button';
         login.className = 'integration-login';
         login.textContent = waiting ? '登入中…' : '登入';
-        login.title = waiting ? '請在終端機和瀏覽器完成登入' : `打開終端機登入 ${CLI_NAMES[item.id]}`;
+        login.title = waiting ? '請在終端機和瀏覽器完成登入' : L(`打開終端機登入 ${CLI_NAMES[item.id]}`, `Open Terminal to sign in to ${CLI_NAMES[item.id]}`);
         login.addEventListener('click', (event) => {
           event.preventDefault(); // 不要連帶切換勾選
           event.stopPropagation();
@@ -1131,7 +1177,7 @@ function renderIntegrations() {
 
 integrationsForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (setupMode === 'wizard' && setupPage !== 'done') { goSetup(1); return; } // 在中間頁按 Enter：只往下一步
+  if (setupMode === 'wizard' && setupPage !== 'done') { void setupForward(); return; } // 在中間頁按 Enter：只往下一步
   const items = state?.integrations?.items || [];
   const enabled = Object.fromEntries(Object.entries(integrationsDraft || {}).filter(([id]) => items.some((item) => item.id === id && item.installed && !item.unsupported)));
   const checked = Object.keys(enabled).filter((id) => enabled[id]);
@@ -1206,7 +1252,7 @@ function renderHome() {
   const newItems = (state.integrations?.items || []).filter((item) => item.isNew && item.installed);
   integrationsBanner.hidden = !state.integrations || (Boolean(state.integrations.decided) && !newItems.length);
   integrationsBannerText.textContent = state.integrations?.decided && newItems.length
-    ? `有新的 AI 可以連接：${newItems.map((item) => item.label.replace(/（.*）/, '')).join('、')}。`
+    ? L(`有新的 AI 可以連接：${newItems.map((item) => item.label.replace(/\s*[（(].*[）)]/, '')).join('、')}。`, `New AI available to connect: ${newItems.map((item) => item.label.replace(/\s*[（(].*[）)]/, '')).join(', ')}.`)
     : '還沒設定要連接哪些 AI，目前所有選項都不能用。';
   if (integrationsDialog.open && setupPage === 'ai') renderIntegrations();
   if (integrationsDialog.open && setupPage === 'done') renderSetupSummary();
@@ -1253,20 +1299,23 @@ function renderHome() {
       split: '送出後左 2/3 放原本的程式、右 1/3 放 AI，固定並排不自動收起。',
       none: '只把內容貼進 AI 並送出，不移動任何視窗。',
     }[layout],
-    cli: `在背景用 ${(target?.label || '').replace(/（.*）/, '')} 回答，回覆顯示在小精靈對話框。`,
+    cli: L(`在背景用 ${(target?.label || '').replace(/\s*[（(].*[）)]/, '')} 回答，回覆顯示在小精靈對話框。`, `${(target?.label || '').replace(/\s*[（(].*[）)]/, '')} answers in the background; replies show in the Screen Spirit window.`),
     ollama: !state.ollama?.running
       ? 'Ollama 沒有在執行：請先打開 Ollama App。'
-      : `用這台 Mac 上的 ${selectionModel.value || '（請選模型）'} 回答，不用網路、不花錢；回覆顯示在小精靈對話框。`,
+      : L(`用這台 Mac 上的 ${selectionModel.value || '（請選模型）'} 回答，不用網路、不花錢；回覆顯示在小精靈對話框。`, `${selectionModel.value || '(choose a model)'} on this computer answers — no internet, no cost; replies show in the Screen Spirit window.`),
     api: !state.mixroute?.hasKey
       ? '還沒設定 MixRoute 金鑰，按「金鑰」輸入。'
-      : `用 MixRoute 的 ${selectionModel.value || '（請選模型）'} 回答，會扣 MixRoute 點數；回覆顯示在小精靈對話框。${
+      : L(`用 MixRoute 的 ${selectionModel.value || '（請選模型）'} 回答，會扣 MixRoute 點數；回覆顯示在小精靈對話框。${
         state.mixroute?.imageSupport?.[selectionModel.value] === 'no' ? '⚠︎ 這個模型不能看圖片，圈選的畫面會改送 OCR 辨識出的文字。' : ''}`,
+        `MixRoute's ${selectionModel.value || '(choose a model)'} answers and uses MixRoute credits; replies show in the Screen Spirit window.${
+        state.mixroute?.imageSupport?.[selectionModel.value] === 'no' ? ' ⚠︎ This model can\'t read images; the selection will be sent as OCR text.' : ''}`),
     builtin: state.builtinError
-      ? `內建 ChatGPT 目前連不上：${state.builtinError}（在下方「內建 ChatGPT 方案」可以重試）`
+      ? L(`內建 ChatGPT 目前連不上：${state.builtinError}（在下方「內建 ChatGPT 方案」可以重試）`, `Built-in ChatGPT can't connect right now: ${tr(state.builtinError)} (retry under "Built-in ChatGPT plan" below)`)
       : '用小精靈內建的 ChatGPT 方案回答；需要先在下方「內建 ChatGPT 方案」連線。',
   };
   homeTargetHint.textContent = target?.projectBased
-    ? `送出時先選要在哪個專案裡問（最近的專案、其他資料夾或開新專案），小精靈會打開 ${target.label.replace(/（.*）/, '')} 和那個專案，把圖片與問題貼到對話框，不會自動送出。`
+    ? L(`送出時先選要在哪個專案裡問（最近的專案、其他資料夾或開新專案），小精靈會打開 ${target.label.replace(/\s*[（(].*[）)]/, '')} 和那個專案，把圖片與問題貼到對話框，不會自動送出。`,
+      `When you send, first pick the project to ask in (a recent project, another folder or a new one). Screen Spirit opens ${target.label.replace(/\s*[（(].*[）)]/, '')} with that project and pastes the image and question into the chat box without sending.`)
     : hints[kind] || '';
 
   const drawerState = state.drawer || {};
@@ -1341,7 +1390,7 @@ async function prepareImage(file) {
   const dataUrl = await readAsDataUrl(file);
   let image;
   try { image = await loadImage(dataUrl); } catch {
-    throw new Error(`無法讀取「${file.name}」。HEIC 等格式請先在「預覽程式」轉存成 JPEG 或 PNG。`);
+    throw new Error(L(`無法讀取「${file.name}」。HEIC 等格式請先在「預覽程式」轉存成 JPEG 或 PNG。`, `Can't read "${file.name}". Convert HEIC and similar formats to JPEG or PNG first.`));
   }
   const supported = ['image/png', 'image/jpeg', 'image/webp'].includes(file.type);
   if (supported && file.size <= 8 * 1024 * 1024 && Math.max(image.width, image.height) <= MAX_IMAGE_SIDE) return dataUrl;
@@ -1384,14 +1433,14 @@ async function addAttachments(fileList) {
         problems.push(error.message);
       }
     } else if (TEXT_FILE.test(file.name) || file.type.startsWith('text/')) {
-      if (file.size > MAX_TEXT_FILE) { problems.push(`「${file.name}」太大（文字檔上限 300 KB）。`); continue; }
+      if (file.size > MAX_TEXT_FILE) { problems.push(L(`「${file.name}」太大（文字檔上限 300 KB）。`, `"${file.name}" is too large (text files up to 300 KB).`)); continue; }
       const text = await file.text();
       attachedFiles = [...attachedFiles.filter((item) => item.name !== file.name), { name: file.name, text }];
     } else {
-      problems.push(`「${file.name}」目前不支援。可以附圖片（PNG、JPEG、WebP、GIF）或文字檔（txt、md、csv、json…）；PDF、Word 請先複製裡面的文字貼上。`);
+      problems.push(L(`「${file.name}」目前不支援。可以附圖片（PNG、JPEG、WebP、GIF）或文字檔（txt、md、csv、json…）；PDF、Word 請先複製裡面的文字貼上。`, `"${file.name}" isn't supported. Attach images (PNG, JPEG, WebP, GIF) or text files (txt, md, csv, json…); for PDF or Word, copy the text and paste it in.`));
     }
   }
-  if (combinedSourceText().endsWith('（內容太長，後面省略）')) attachNote = `${attachNote}附件的文字太多，超過的部分不會送出。`.trim();
+  if (combinedSourceText().endsWith('（內容太長，後面省略）')) attachNote = `${attachNote}${L('附件的文字太多，超過的部分不會送出。', ' The attached text is too long; the extra part won\'t be sent.')}`.trim();
   state.error = problems.join(' ');
   renderAttachments();
   render();
@@ -1410,7 +1459,7 @@ function renderAttachments() {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.textContent = '×';
-    remove.setAttribute('aria-label', `移除 ${label}`);
+    remove.setAttribute('aria-label', L(`移除 ${label}`, `Remove ${label}`));
     remove.addEventListener('click', () => { onRemove(); renderAttachments(); render(); });
     element.append(text, meta, remove);
     return element;
@@ -1425,7 +1474,7 @@ function renderAttachments() {
     }));
   }
   for (const file of attachedFiles) {
-    chips.push(chip('📄', file.name, `${file.text.length.toLocaleString()} 字`, () => { attachedFiles = attachedFiles.filter((item) => item !== file); }));
+    chips.push(chip('📄', file.name, L(`${file.text.length.toLocaleString()} 字`, `${file.text.length.toLocaleString()} chars`), () => { attachedFiles = attachedFiles.filter((item) => item !== file); }));
   }
   if (attachNote) {
     const note = document.createElement('small');
@@ -1632,9 +1681,9 @@ function renderLoginBar() {
   const name = CLI_NAMES[id];
   cliLoginBar.dataset.status = status;
   const texts = {
-    needed: [`${name} 還沒登入（或登入已過期）。按右邊的按鈕，小精靈會打開終端機和瀏覽器登入頁。`, `登入 ${name}`],
-    waiting: ['已打開終端機：請在瀏覽器完成登入。完成後小精靈會自動接著用' + (pendingLoginRetry ? '，並重新送出剛才的問題。' : '。'), '重新打開'],
-    done: [`${name} 已登入 ✓` + (pendingLoginRetry ? '，正在重新送出剛才的問題…' : ''), ''],
+    needed: [L(`${name} 還沒登入（或登入已過期）。按右邊的按鈕，小精靈會打開終端機和瀏覽器登入頁。`, `${name} isn't signed in (or the sign-in expired). Press the button on the right and Screen Spirit will open Terminal and the browser sign-in page.`), L(`登入 ${name}`, `Sign in to ${name}`)],
+    waiting: [L('已打開終端機：請在瀏覽器完成登入。完成後小精靈會自動接著用' + (pendingLoginRetry ? '，並重新送出剛才的問題。' : '。'), 'Terminal is open: finish signing in in the browser. Screen Spirit will continue automatically' + (pendingLoginRetry ? ' and resend your question.' : '.')), '重新打開'],
+    done: [L(`${name} 已登入 ✓` + (pendingLoginRetry ? '，正在重新送出剛才的問題…' : ''), `${name} signed in ✓` + (pendingLoginRetry ? ' — resending your question…' : '')), ''],
     failed: ['登入沒有完成（終端機裡的登入被中斷或失敗）。', '再試一次'],
     timeout: ['等了 10 分鐘還沒完成登入，已停止等待。', '再試一次'],
   }[status] || ['', ''];
@@ -1756,9 +1805,9 @@ function describeExpiry(record) {
   const left = Date.parse(record.expiresAt) - Date.now();
   if (!Number.isFinite(left)) return { text: '', level: '' };
   if (left <= 0) return { text: '即將刪除', level: 'urgent' };
-  const text = left < HOUR ? `還有 ${Math.max(1, Math.round(left / 60_000))} 分鐘`
-    : left < 48 * HOUR ? `還有 ${Math.round(left / HOUR)} 小時`
-      : `還有 ${Math.round(left / (24 * HOUR))} 天`;
+  const text = left < HOUR ? L(`還有 ${Math.max(1, Math.round(left / 60_000))} 分鐘`, `${Math.max(1, Math.round(left / 60_000))} min left`)
+    : left < 48 * HOUR ? L(`還有 ${Math.round(left / HOUR)} 小時`, `${Math.round(left / HOUR)} h left`)
+      : L(`還有 ${Math.round(left / (24 * HOUR))} 天`, `${Math.round(left / (24 * HOUR))} days left`);
   return { text, level: left < 3 * HOUR ? 'urgent' : left < 2 * 24 * HOUR ? 'soon' : '' };
 }
 
@@ -1796,6 +1845,7 @@ function renderHistory(records) {
     open.className = 'history-open';
     open.type = 'button';
     const title = document.createElement('strong');
+    title.dataset.i18nSkip = ''; // 使用者的問題不翻譯
     title.textContent = record.title;
     const meta = document.createElement('span');
     meta.className = 'history-meta';
@@ -1804,13 +1854,13 @@ function renderHistory(records) {
     ai.textContent = record.targetLabel || 'AI';
     const where = document.createElement('span');
     where.className = 'history-local';
-    where.textContent = record.localOnly ? '只存在這台 Mac' : '原對話在 App／網頁裡';
+    where.textContent = record.localOnly ? L('只存在這台 Mac', 'Only on this computer') : '原對話在 App／網頁裡';
     const details = document.createElement('small');
     const questions = Math.ceil(record.messageCount / 2);
-    details.textContent = `${formatHistoryDate(record.updatedAt || record.createdAt)} · ${questions} 則提問${record.origin === 'spirit' ? '' : ' · 可以接著問'}`;
+    details.textContent = L(`${formatHistoryDate(record.updatedAt || record.createdAt)} · ${questions} 則提問${record.origin === 'spirit' ? '' : ' · 可以接著問'}`, `${formatHistoryDate(record.updatedAt || record.createdAt)} · ${questions} question(s)${record.origin === 'spirit' ? '' : ' · can continue'}`);
     meta.append(ai, ...(record.spiritName ? [Object.assign(document.createElement('span'), { className: 'history-spirit', textContent: `🧙 ${record.spiritName}` })] : []), where, details);
     open.append(title, meta);
-    open.title = record.origin === 'spirit' ? '打開這段對話' : `打開這段 ${record.targetLabel} 對話，直接輸入就會接著問`;
+    open.title = record.origin === 'spirit' ? '打開這段對話' : L(`打開這段 ${record.targetLabel} 對話，直接輸入就會接著問`, `Open this ${tr(record.targetLabel)} conversation and keep asking`);
     open.addEventListener('click', async () => {
       try {
         const result = await bridge.openHistory(record.id);
@@ -1829,7 +1879,7 @@ function renderHistory(records) {
     badge.dataset.level = expiry.level;
     badge.textContent = expiry.text;
     const by = document.createElement('small');
-    by.textContent = record.expiresAt ? `${formatHistoryDate(record.expiresAt)} 刪除` : (record.targetLabel || '');
+    by.textContent = record.expiresAt ? L(`${formatHistoryDate(record.expiresAt)} 刪除`, `Deleted ${formatHistoryDate(record.expiresAt)}`) : tr(record.targetLabel || '');
     badge.append(by);
     badge.title = record.retention || '';
     row.append(open, badge);
@@ -1847,7 +1897,7 @@ function renderHistory(records) {
       // Claude Code／Codex／Gemini 自己的檔案：小精靈只讀不刪
       const keeper = document.createElement('span');
       keeper.className = 'history-keeper';
-      keeper.textContent = `由 ${record.targetLabel} 保管`;
+      keeper.textContent = L(`由 ${record.targetLabel} 保管`, `Kept by ${tr(record.targetLabel)}`);
       keeper.title = record.retention || '';
       row.append(keeper);
     }
@@ -1984,7 +2034,7 @@ bridge.onHistoryOpened(({ sourceKind, imageDataUrl, sourceText, continues }) => 
   selectedContext = Array.isArray(state?.conversation?.source?.context) ? state.conversation.source.context : [];
   renderContext();
   selectionQuestionDescription.textContent = continues
-    ? `已打開 ${continues} 的對話紀錄。直接輸入問題，就會接著這段對話問（不會重新開始）。`
+    ? L(`已打開 ${continues} 的對話紀錄。直接輸入問題，就會接著這段對話問（不會重新開始）。`, `Opened the ${continues} conversation. Type a question to continue it (it won't start over).`)
     : '已從歷史紀錄開啟。送到外部 AI 軟體時，會用原本的內容開一段新對話。';
   if (!selectionQuestionDialog.open) selectionQuestionDialog.showModal(); syncSpiritPreview();
   fitQuestionTranscript();
@@ -2055,4 +2105,16 @@ bridge.onClipboardResult(({ text, imageDataUrl, warning, context }) => {
 });
 
 state = await bridge.getState();
+setLanguage(state.language?.current);
+installTranslator();
 render();
+// 第一次設定做到一半（例如剛換了語言而重新載入）：接著打開
+if (state.integrations && !state.integrations.decided && readPreference(SETUP_STEP_KEY, '')) openIntegrations();
+
+// 主視窗上方的語言選單
+const languageSelect = document.querySelector('#language-select');
+languageSelect.value = getLanguage();
+languageSelect.addEventListener('change', async () => {
+  await bridge.languageSet(languageSelect.value);
+  location.reload();
+});

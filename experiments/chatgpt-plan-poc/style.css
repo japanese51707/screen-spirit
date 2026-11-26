@@ -362,3 +362,12 @@ select option:disabled { color: #b5b6ae; }
 .integration-row[data-installed="false"] { opacity: 1; }
 .integration-row[data-installed="false"] > input, .integration-row[data-installed="false"] .integration-text { opacity: .5; }
 .integration-row[data-unsupported="true"] .integration-status { color: #b0622d; }
+
+/* ── 語言 ── */
+.language-control { display: inline-flex; align-items: center; gap: 3px; padding: 0 4px; color: #5c6057; font-size: 12px; }
+.language-control select { padding: 5px 4px; border: 1px solid #dddbd3; border-radius: 8px; color: #3c3f37; background: #fffefa; font-size: 11px; }
+.setup-languages { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 18px 6px; }
+.setup-language { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 64px; padding: 14px 16px; border: 1.5px solid #e4e2da; border-radius: 12px; color: #272924; background: #fffefa; text-align: left; cursor: pointer; }
+.setup-language strong { font-size: 15px; }
+.setup-language small { min-height: 1em; color: #6c64b5; font-size: 10px; }
+.setup-language[aria-checked="true"] { border-color: #6c64b5; background: #f3f1fb; box-shadow: 0 0 0 3px #6c64b522; }

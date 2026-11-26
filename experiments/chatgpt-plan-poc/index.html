@@ -28,6 +28,7 @@
           <button id="workflow-button" class="button button-quiet" type="button" title="把精靈和 AI 工具串成工作流">⛓ 工作流</button>
           <button id="integrations-button" class="button button-quiet" type="button">管理 AI 連線</button>
           <button id="history-button" class="button button-quiet" type="button">歷史紀錄</button>
+          <label class="language-control" data-i18n-skip title="Language / 語言"><span aria-hidden="true">🌐</span><select id="language-select" aria-label="Language / 語言"><option value="en">English</option><option value="zh-TW">繁體中文</option></select></label>
           <button id="hide-chat-button" class="chat-close" type="button" aria-label="收起視窗">×</button>
         </div>
       </header>
@@ -146,7 +147,7 @@
           <p id="selection-question-description" class="selection-dialog-description">已附上圈選內容。你可以在這個對話框提問與追問。</p>
           <div id="selection-question-source" class="selection-question-source" hidden>
             <strong>已複製的來源內容</strong>
-            <div id="selection-question-source-text"></div>
+            <div id="selection-question-source-text" data-i18n-skip></div>
           </div>
           <img id="selection-question-image" alt="本次來源內容預覽" hidden />
           <div id="selection-context" class="selection-context" aria-label="將附帶的畫面脈絡" hidden></div>
@@ -222,6 +223,11 @@
             <button id="integrations-redetect" class="button button-quiet" type="button">重新偵測</button>
           </header>
           <ol id="setup-steps" class="setup-steps" hidden></ol>
+          <section class="setup-page" data-page="language" data-i18n-skip hidden>
+            <p class="setup-lead">Choose a language for Screen Spirit.<br />請選擇小精靈的介面語言。</p>
+            <div id="setup-languages" class="setup-languages" role="radiogroup" aria-label="Language / 語言"></div>
+            <p class="setup-hint">You can change it any time with 🌐 at the top of the main window.<br />之後可以隨時在主視窗上方的 🌐 更改。</p>
+          </section>
           <section class="setup-page" data-page="welcome" hidden>
             <p class="setup-lead">歡迎使用螢幕圈選 AI 小精靈！接下來一步一步帶你完成設定，大約一分鐘。</p>
             <div id="setup-platform" class="setup-card"></div>
@@ -259,7 +265,7 @@
           </div>
           <button id="history-close" class="chat-close" type="button" aria-label="關閉歷史紀錄">×</button>
         </header>
-        <p class="history-note">Claude Code、Codex、Gemini CLI、Ollama、MixRoute 與內建 ChatGPT 的對話<strong>只存在這台 Mac</strong>，在網頁或 App 的歷史清單裡找不到，請在這裡查。每一筆右邊標示還有多久會被自動刪除。</p>
+        <p class="history-note">Claude Code、Codex、Gemini CLI、Ollama、MixRoute 與內建 ChatGPT 的對話<strong>只存在這台電腦</strong>，在網頁或 App 的歷史清單裡找不到，請在這裡查。每一筆右邊標示還有多久會被自動刪除。</p>
         <div class="history-tools">
           <div class="history-filters" role="radiogroup" aria-label="要看哪些紀錄">
             <button class="history-filter" type="button" role="radio" data-filter="local" aria-checked="true">只存在這台 Mac</button>

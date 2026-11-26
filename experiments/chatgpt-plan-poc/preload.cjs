@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('screenSpirit', {
   permissionsStatus: () => ipcRenderer.invoke('poc:permissions-status'),
   permissionsOpen: (kind) => ipcRenderer.invoke('poc:permissions-open', kind),
   appRelaunch: () => ipcRenderer.invoke('poc:app-relaunch'),
+  languageSet: (lang) => ipcRenderer.invoke('poc:language-set', lang),
   openInstallLink: (id) => ipcRenderer.invoke('poc:open-install-link', id),
   builtinRetry: () => ipcRenderer.invoke('poc:builtin-retry'),
   cliLogin: (targetId) => ipcRenderer.invoke('poc:cli-login', targetId),
